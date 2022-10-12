@@ -2,3 +2,4 @@
 
 List of directories:
 - Visibility: contains code that calculates the visibility of a transients during a specified night given its right ascension and declination at the location of a follow-up telescope.
+- TNS: contains code that automates the downloading of updates to the Transient Name Server (TNS) and then adds these updates to the TNS database saved on the local system.
