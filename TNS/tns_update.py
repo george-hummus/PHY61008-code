@@ -15,7 +15,7 @@ today = dt.datetime.utcnow()
 yesterday = today - dt.timedelta(days=1)
 
 #load in the fulldata base
-file=open("tns_public_objects.csv") #load in database
+file=open("/home/pha17gh/TNS/tns_public_objects.csv") #load in database
 csvreader = csv.reader(file) #openfile as csv
 next(csvreader) #skip the date
 headers = next(csvreader) #save headers
@@ -26,7 +26,7 @@ for row in csvreader:
 database = np.array(database,dtype="object")
 
 #now load in the CSV with the updates
-file2=open(f"tns_public_objects_{yesterday.strftime('%Y%m%d')}.csv") #load in updates from previous day
+file2=open(f"/home/pha17gh/TNS/tns_public_objects_{yesterday.strftime('%Y%m%d')}.csv") #load in updates from previous day
 csvreader2 = csv.reader(file2) #openfile as csv
 next(csvreader2) #skip the date
 next(csvreader2) # skip the header
@@ -51,7 +51,7 @@ for i in range(len(updates)):
 database = np.vstack([headers,database]) #add the headers back to the top
 
 #save out the database
-filename = "tns_public_objects.csv"
+filename = "/home/pha17gh/TNS/tns_public_objects.csv"
 with open(filename, 'w') as file:
     csvwriter = csv.writer(file,delimiter=",") # create a csvwriter object
     csvwriter.writerow([today.strftime('%d-%m-%Y')]) #add date to first row
