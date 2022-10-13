@@ -1,6 +1,0 @@
-TNS/*.csv
-TNS/.ipynb_checkpoints/*
-Visibility/*.json
-Visibility/*.bsp
-Visibility/.ipynb_checkpoints/*
-TNS/.*
