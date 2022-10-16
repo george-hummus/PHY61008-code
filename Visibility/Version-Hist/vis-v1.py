@@ -5,7 +5,6 @@ Author: George Hume
 2022
 """
 
-### IMPORTS ###
 import datetime as dt
 from skyfield import almanac
 from skyfield.api import N, E, wgs84, load, utc, Star
@@ -16,7 +15,6 @@ import json
 import csv
 import argparse
 
-### SYSTEM ARGUMENTS ###
 parser = argparse.ArgumentParser(description = """
 Given the RA and dec of a transient the script will calculate its visibility for a specified location and date. The visibility includes the range of altitudes of the target for the night of the given date  , the time it is visible in dark time,
 """)
@@ -32,7 +30,6 @@ parser.add_argument('tns_alerts' , type = str, help = 'File name of CSV file con
 
 args = parser.parse_args()
 
-
 #unpack the date
 date = dt.datetime.strptime(args.date, "%d/%m/%Y")
 date = date.replace(tzinfo=utc)
@@ -41,8 +38,8 @@ date = date.replace(tzinfo=utc)
 #loads in ephemerides and time scle
 eph = load('de421.bsp')
 ts = load.timescale()
-#sets up sun, earth (needed for calculating dark time and our location respectivly) and moon (for illumination)
-earth, sun, moon = eph['earth'], eph['sun'], eph['moon']
+#sets up sun and earth - needed for calculating dark time and our location respectivly
+earth, sun = eph['earth'], eph['sun']
 location = wgs84.latlon(args.lat * N, args.long * E, elevation_m = args.elv)
 Epos = earth + location #sets up observing position (i.e., the postion of the follow-up telescope)
 
@@ -119,26 +116,15 @@ for k in tar_list:
         alt, az, distance = app.altaz()
         altitudes.append(alt.degrees)
 
-    #making dictionary that contains the outputs
-    Toutput = {"name":k['name_prefix']+k['name'],"RA":f"{ra_hours}:{ra_mins}:{round(ra_secs,6)}","Dec":f"{dec_degs}:{dec_mins}:{round(dec_secs,6)}","altitudes":{"sunset":round(altitudes[0],6),"darktime-start":round(altitudes[1],6),"darktime-end":round(altitudes[2],6),"sunrise":round(altitudes[3],6)}
+    #making dictonary that contains the outputs
+    Toutput = {"name":k['name_prefix']+k['name'],"RA":f"{ra_hours}:{ra_mins}:{ra_secs}","Dec":f"{dec_degs}:{dec_mins}:{dec_secs}","altitudes":{"sunset":altitudes[0],"darktime-start":altitudes[1],"darktime-end":altitudes[2],"sunrise":altitudes[3]}
     }
 
     all_dict[k["objid"]] = Toutput
 
-
-#calculate moon's alt, phase, and illumination and middle of dark time
-middledark = darkstart + (darkend-darkstart)
-mastro = Epos.at(middledark).observe(moon)
-mapp = mastro.apparent()
-malt, maz, mdst = mapp.altaz()
-mphase = almanac.moon_phase(eph, middledark)
-mill = almanac.fraction_illuminated(eph,"moon",middledark)
-
-
-output = {"location":{"latitude":args.lat,"longitude":args.long,"elevation":args.elv},
+output = {"location":{"lattitude":args.lat,"longitude":args.long,"elevation":args.elv},
 "date":args.date,
 "night_phases":{"sunset":sunset.utc_strftime("%H:%M:%S %d/%m/%Y"),"darktime-start":darkstart.utc_strftime("%H:%M:%S %d/%m/%Y"),"darktime-end":darkend.utc_strftime("%H:%M:%S %d/%m/%Y"),"sunrise":sunrise.utc_strftime("%H:%M:%S %d/%m/%Y")},
-"moon":{"alt": round(malt.degrees,6), "phase-degs": round(mphase.degrees,6), "illumination-percent": round(mill,6)},
 "targets":all_dict
 }
 
