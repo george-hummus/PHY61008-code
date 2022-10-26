@@ -80,10 +80,7 @@ sunset = times[0]
 darkstart = times[3]
 darkend = times[4]
 sunrise = times[7] #using the indcies to extract the different times of night
-
-#find the UTC time at the middle of the night
-middark = ts.from_datetime(darkstart.utc_datetime()+((darkend.utc_datetime() - darkstart.utc_datetime())/2))
-darktimes = [darkstart,middark,darkend] #list of the time at the start, middle, and end of dark time
+nightphases = [sunset,darkstart,darkend,sunrise] #savetogether as list for when calculating alts
 
 ## calculate moon's alt, phase, and illumination ##
 midnight = t0 + dt.timedelta(hours=12)
@@ -253,22 +250,6 @@ for k in tqdm(tar_list):
         #find the observable time f the target
         t_obs = obs_time(darkstart,darkend,rise35,set35)
 
-        if t_obs > 0: #if non zero time for observing then can calculate the lunar separation
-            a_seps = []
-            for DT in darktimes:
-                # angular separation doesn't depend on location on earth just time
-                e = earth.at(DT) #set earth as centre
-                m = e.observe(moon) #observe moon at time DT
-                T = e.observe(target) #observe target at time DT
-                a_sep = m.separation_from(T).degrees #find angular separation in degrees
-                a_seps.append(a_sep) #append to list
-
-            asep = np.mean(a_seps) #find mean angular separation during darktime
-
-        else: #if no observable time then don't need to calculate the angular sep
-            asep = 0
-
-
     #making dictionary that contains the outputs
     Toutput = {
     "name":k['name_prefix']+k['name'],
@@ -276,8 +257,7 @@ for k in tqdm(tar_list):
     "Dec":f"{dec_degs}:{dec_mins}:{round(dec_secs,6)}",
     "Transit":{"time":trans_time.utc_strftime("%Y-%m-%d %H:%M:%S"),"altitude":round(trans_alt,6)},
     "Times_at_35" : {"rise":rise35.utc_strftime("%Y-%m-%d %H:%M:%S"),"set":set35.utc_strftime("%Y-%m-%d %H:%M:%S"),"length":round(above35,6)},
-    "Observable_time":round(t_obs,6),
-    "Lunar_Sep":round(asep,6)
+    "Observable_time":round(t_obs,6)
     }
 
     all_dict[k["objid"]] = Toutput
