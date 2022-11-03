@@ -11,7 +11,7 @@ import numpy as np
 import datetime as dt
 
 #dates used to load in files and add to top of csv
-today = dt.datetime.utcnow() 
+today = dt.datetime.utcnow()
 yesterday = today - dt.timedelta(days=1)
 
 #load in the fulldata base
@@ -46,7 +46,7 @@ for i in range(len(updates)):
     if IDrow.size == 0: #if id is not in database then this is a new ID
         database = np.vstack([row,database]) #inserts new ID at the top of the database
     else: #if it is in database then we need to update the entry
-        database[IDrow][0] = row
+        database[IDrow[0]] = row
 
 database = np.vstack([headers,database]) #add the headers back to the top
 
