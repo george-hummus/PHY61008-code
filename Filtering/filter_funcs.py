@@ -11,6 +11,7 @@ import numpy as np
 import datetime as dt
 from skyfield import almanac
 from skyfield.api import N, E, wgs84, load, utc, Star
+from tqdm import tqdm
 
 ################################################################################
 
@@ -25,7 +26,7 @@ def loadDB(filename):
         - database: numpy object array containg all the entries of the TNS database
     """
 
-    file=open(filename) #database released on 2022-10-11 00:00:00
+    file=open(filename)
     csvreader = csv.reader(file) #openfile as csv
     date = next(csvreader) #save the date
     headers = next(csvreader) #save headers
@@ -99,7 +100,7 @@ def Visibility(date, ra, dec, lat, long, elv):
     """
 
     #convert date to datetime object at midday
-    today = dt.datetime.strptime(date, '%Y%m%d') + dt.timedelta(days=0.5)
+    today = dt.datetime.strptime(date, '%Y-%m-%d %H:%M:%S') + dt.timedelta(days=0.5)
     today =today.replace(tzinfo=utc)
     tomorrow = today + dt.timedelta(days=1) #next day at midday
     tomorrow = tomorrow.replace(tzinfo=utc)
@@ -192,9 +193,12 @@ def Visibility(date, ra, dec, lat, long, elv):
         cosHAden = np.cos(latR)*np.cos(decR) #denominator of cos(HA)
         cosHA = cosHAnum/cosHAden
 
-        #find the hour angle using arccos
-        HAdeg = np.degrees(np.arccos(cosHA)) #hour angle in degrees
-        HA = HAdeg/15 #hour angle in hours
+        if cosHA > 1: #i.e., target never reaches 35 degs
+            HA = None
+        else:
+            #find the hour angle using arccos
+            HAdeg = np.degrees(np.arccos(cosHA)) #hour angle in degrees
+            HA = HAdeg/15 #hour angle in hours
 
         return HA
 
@@ -260,10 +264,10 @@ def Visibility(date, ra, dec, lat, long, elv):
     tObs, tAlt, lSep = [], [], []
 
     #find altitude of each transient at sunset, start of dark time, end of darktime, and sunrise
-    for k in range(ra.size):
-        #RA and Dec of target in decimal degrees
-        RA = ra[k]
-        Dec = dec[k]
+    for k in tqdm(range(ra.size)):
+        #RA and Dec of target in decimal degrees converted from string
+        RA = float(ra[k])
+        Dec = float(dec[k])
 
         #convert RA in decimal degrees to RA in hrs, mins, secs
         raH = RA/15 #RA decimal degrees to decimal hours
@@ -290,29 +294,33 @@ def Visibility(date, ra, dec, lat, long, elv):
         else: #otherwise can continue
 
             # find the HA of target at 35 degs
-            HA = alt2HA(35,args.lat,Dec)
-            ## Find the time target rises above 35 and then sets below 35 using the HA and transit time ##
-            rise35 = trans_time - dt.timedelta(hours=HA)
-            set35 = trans_time + dt.timedelta(hours=HA)
-            above35 = ((set35.utc_datetime()-rise35.utc_datetime()).seconds)/3600 #time above 35 degs
+            HA = alt2HA(35,lat,Dec)
 
-            #find the observable time f the target
-            t_obs = obs_time(darkstart,darkend,rise35,set35)
+            if HA == None: #taget never rises above 35 degrees
+                t_obs = 0
+            else:
+                ## Find the time target rises above 35 and then sets below 35 using the HA and transit time ##
+                rise35 = trans_time - dt.timedelta(hours=HA)
+                set35 = trans_time + dt.timedelta(hours=HA)
+                above35 = ((set35.utc_datetime()-rise35.utc_datetime()).seconds)/3600 #time above 35 degs
 
-            if t_obs > 0: #if non zero time for observing then can calculate the lunar separation
-                a_seps = []
-                for DT in darktimes:
-                    # angular separation doesn't depend on location on earth just time
-                    e = earth.at(DT) #set earth as centre
-                    m = e.observe(moon) #observe moon at time DT
-                    T = e.observe(target) #observe target at time DT
-                    a_sep = m.separation_from(T).degrees #find angular separation in degrees
-                    a_seps.append(a_sep) #append to list
+                #find the observable time f the target
+                t_obs = obs_time(darkstart,darkend,rise35,set35)
 
-                asep = np.mean(a_seps) #find mean angular separation during darktime
+                if t_obs > 0: #if non zero time for observing then can calculate the lunar separation
+                    a_seps = []
+                    for DT in darktimes:
+                        # angular separation doesn't depend on location on earth just time
+                        e = earth.at(DT) #set earth as centre
+                        m = e.observe(moon) #observe moon at time DT
+                        T = e.observe(target) #observe target at time DT
+                        a_sep = m.separation_from(T).degrees #find angular separation in degrees
+                        a_seps.append(a_sep) #append to list
 
-            else: #if no observable time then don't need to calculate the angular sep
-                asep = 0
+                    asep = np.mean(a_seps) #find mean angular separation during darktime
+
+                else: #if no observable time then don't need to calculate the angular sep
+                    asep = 0
 
         # add to the lists
         tObs.append(t_obs)
@@ -341,7 +349,7 @@ def pscore(database,weights):
     #remove all entries which are not observable
     bad_idx = []
     for i in range(database.shape[0]):
-        if t_array[i][-3] == 0: #check the observable time of the target
+        if database[i][-3] == 0: #check the observable time of the target
             bad_idx.append(i)
     t_array = np.delete(database,bad_idx,0) #deletes rows with no observable time
 
@@ -349,13 +357,13 @@ def pscore(database,weights):
     newIDs = t_array.T[0]
     pscores = np.zeros(newIDs.shape)
 
-    #sort the intresting rows in acending order
-    to_sort = np.sort(t_array.T[-3])
-    ms_sort = np.sort(t_array.T[-1])
-    alt_sort = np.sort(t_array.T[-2])
+    #sort the intresting rows in decending order so high pscore = low priorty and vice versa
+    to_sort = np.flip(np.sort(t_array.T[-3]))
+    ms_sort = np.flip(np.sort(t_array.T[-1]))
+    alt_sort = np.flip(np.sort(t_array.T[-2]))
 
     #ranking loop - may need a better way to rank these
-    for j in range(to_sort.size):
+    for j in tqdm(range(to_sort.size)):
         #extracts the value of the sorted arrays
         to = to_sort[j]
         ms = ms_sort[j]
@@ -371,8 +379,14 @@ def pscore(database,weights):
         pscores[mID] += (weights[1]*j)
         pscores[aID] += (weights[2]*j)
 
+    #normalise the priority scores so they lie between 0-5 (where 5 is the highest priority)
+    pscores=((pscores-np.min(pscores))/np.max(pscores-np.min(pscores)) * 5)
+
     #add the priorty scores to the new database array
-    t_targets = np.append(t_targets,pscores.resize(pscores.size,1),axis=1)
+    t_targets = np.concatenate((t_array,np.resize(pscores,(pscores.size,1))),axis=1)
+
+    #sort the array by ascending priority score (column index = -1)
+    t_targets = t_targets[t_targets[:, -1].argsort()]
 
     return t_targets
 
