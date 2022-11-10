@@ -81,7 +81,7 @@ def TNSlice(database,date):
 
 ################################################################################
 
-def Visibility(date, ra, dec, lat, long, elv):
+def Visibility(date, ra, dec, lat, long, elv, ephm = 'de421.bsp'):
     """
     Function that calaculates the observable time, lunar separation and transit altitude
     of a list of targets given their right ascension and declination, the latitude
@@ -93,6 +93,7 @@ def Visibility(date, ra, dec, lat, long, elv):
         - lat: the latitude of the location (in decimal degrees)
         - long: the eastwards longitude of the location (in decimal degrees)
         - elv: the elevation of the location (in metres)
+        - ephm: the path to the ephemerides file for skyfield (default is 'de421.bsp')
     Outputs:
         - tObs: the time in hours that the target is above 35 altitude in dark time
         - tAlt: the altitude of the target when it transits the meridian (in decimal degrees)
@@ -109,7 +110,7 @@ def Visibility(date, ra, dec, lat, long, elv):
     ### Set-up sky-field observing ##
     location = wgs84.latlon(lat * N, long * E, elevation_m = elv) #location of observatory
     ts = load.timescale() #loads in timescale
-    eph = load('de421.bsp')  #loads in ephemerides
+    eph = load(ephm)  #loads in ephemerides
     #sets up sun, earth (needed for calculating dark time and our location respectivly) and moon (for illumination, etc.)
     earth, sun, moon = eph['earth'], eph['sun'], eph['moon']
     Epos = earth + location #sets up observing position (i.e., the postion of the follow-up telescope)
