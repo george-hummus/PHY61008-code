@@ -37,7 +37,7 @@ long = -17.7742491 #longitude in degs
 elv = 2326.0 #elevation in metres
 
 #find the observable time, transit altitude, and lunar separation
-t_obs, t_alt, l_sep = Visibility(date, ra, dec, lat, long, elv, ephm = '/home/pha17gh/TNS/de421.bsp')
+t_obs, t_alt, l_sep = Visibility(date, ra, dec, lat, long, elv)
 
 #from new database with columns for ID, name, ra, dec, t_disc t_mod, mag, t_obs, t_alt & lsep
 num = IDs.size
