@@ -1,0 +1,9 @@
+Here is a little help from your friends:
+
+	Attached is the list of transients visible from La Palma tonight.
+	The list is ordered by their priority score (0 is high; 5 is low).
+
+Regards,
+
+Billy Shears Bot
+
