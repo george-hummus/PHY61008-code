@@ -36,7 +36,64 @@ def loadDB(filename):
     #convert list into numpy array
     database = np.array(database,dtype="object")
 
+    close(file)
+
     return date[0], headers, database
+
+################################################################################
+
+def DandU(udate,date,database):
+    """
+    This function downloads an update csv file from the TNS server and then uses it to update the local copy of the TNS database.
+    Arguments:
+        - udate: a string representing the date of the update from the TNS. Format is %Y%m%d.
+        - date: todays date as a datetime object.
+        - database: the values of the tns database (minus the date and headers) as numpy array.
+    Outputs:
+        - a newly updated tns_public_objects.csv file
+    """
+
+    #name of update file
+    ufile = f"tns_public_objects_{udate}.csv"
+
+    #string that consitutues the curl commnad for downloading
+    cmd1 = '''curl -X POST -H 'user-agent: tns_marker{"tns_id":142993,"type": "bot", "name":"BillyShears"}' -d 'api_key=SECRET' '''
+    cmd2 = f" https://www.wis-tns.org/system/files/tns_public_objects/{ufile}.zip > /home/pha17gh/TNS/{ufile}.zip"
+    cmd = cmd1+cmd2
+
+    #do the curl command to download the update file
+    subprocess.call(cmd,shell=True)
+
+    #unzip the csv and delete the zip file
+    uzip = f"unzip /home/pha17gh/TNS/{ufile}.zip -d /home/pha17gh/TNS/"
+    rem = f"rm /home/pha17gh/TNS/{ufile}.zip"
+    subprocess.call(uzip,shell=True)
+    subprocess.call(rem,shell=True)
+
+    #load in update entries (skip date and headers tho)
+    UDname = f"/home/pha17gh/TNS/{ufile}.csv"
+    dummy1,dummy2,updates = loadDB(UDname)
+
+    #now need to loop through each entry in the updates  and find match/ or add if new to the database
+    #need to loop from bottom to top so to add newest entries to the top of the database
+    for i in range(len(updates)):
+        row = updates[-(i+1)] #extarcts rows from bottom upwards (index -1 -> -len)
+        ID = row[0] #get the id of the update
+        IDrow = np.where(database == ID)[0] # looks for row corresponding to ID in the database
+
+        if IDrow.size == 0: #if id is not in database then this is a new ID
+            database = np.vstack([row,database]) #inserts new ID at the top of the database
+        else: #if it is in database then we need to update the entry
+            database[IDrow[0]] = row
+
+    database = np.vstack([headers,database]) #add the headers back to the top
+
+    #save out the database
+    filename = "/home/pha17gh/TNS/tns_public_objects.csv"
+    with open(filename, 'w') as file:
+        csvwriter = csv.writer(file,delimiter=",") # create a csvwriter object
+        csvwriter.writerow([today.strftime('%Y-%m-%d %H:%M:%S')]) #add date to first row
+        csvwriter.writerows(database) # write the headers and rest of the data
 
 ################################################################################
 
@@ -292,13 +349,15 @@ def Visibility(date, ra, dec, lat, long, elv, ephm = 'de421.bsp'):
         # if the transit altitude is less than 35 then cant observe it #
         if trans_alt < 35:
             t_obs = 0
+            asep = 0 #set lunar separation to be zero also
         else: #otherwise can continue
 
             # find the HA of target at 35 degs
             HA = alt2HA(35,lat,Dec)
 
-            if HA == None: #taget never rises above 35 degrees
+            if HA == None: #target never rises above 35 degrees
                 t_obs = 0
+                asep = 0 #set lunar separation to be zero also
             else:
                 ## Find the time target rises above 35 and then sets below 35 using the HA and transit time ##
                 rise35 = trans_time - dt.timedelta(hours=HA)
