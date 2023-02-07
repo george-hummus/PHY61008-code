@@ -1,6 +1,8 @@
 """
 Script that updates the local TNS database with the updates downloaded via curl from the TNS.
 
+Depends on filter_funcs.py script to operate.
+
 Author: George Hume
 2023
 """
@@ -24,10 +26,13 @@ today = dt.datetime.combine(dt.datetime.now(), dt.datetime.min.time()) #today's 
 #time difference between the dates
 deltaT = (today - DB_date).days #time diff in days
 
-if if deltaT == 1:
+if deltaT == 0:
+	print("TNS database is already up to date")
+
+elif deltaT == 1:
 	#if only 1 day diff then download yesterday's updates and add to database
 	udate = DB_date.strftime('%Y%m%d')
-	DandU(udate,today,database)
+	DandU(udate,today,database,headers)
 
 elif (deltaT>1) & (deltaT<=25):
 	#if between 2 and 25days difference then download all previous updates and add then to database
@@ -36,13 +41,15 @@ elif (deltaT>1) & (deltaT<=25):
     	#go from last to most current update
 
     	#date as string to find update file
-    	new_date = (DB_date+dt.timedelta(days=i)).strftime('%Y%m%d')
+		udate = DB_date.strftime('%Y%m%d')
+    	next_day = DB_date+dt.timedelta(days=1)
 
-    	#do the update
-    	DandU(new_date,today,database)
+    	#do the update for that date
+    	DandU(udate,next_day,database,headers)
 
     	#load new database that was just saved so it can be overwritten again
     	DBdate, headers, database = loadDB(DBname)
+		DB_date = dt.datetime.strptime(DBdate, '%Y-%m-%d %H:%M:%S') #convert next date into datetime object
 
 else:
 	#if over 25days difference then redownload the whole database from the TNS

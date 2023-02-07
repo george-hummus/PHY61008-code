@@ -12,6 +12,7 @@ import datetime as dt
 from skyfield import almanac
 from skyfield.api import N, E, wgs84, load, utc, Star
 from tqdm import tqdm
+import subprocess
 
 ################################################################################
 
@@ -36,13 +37,13 @@ def loadDB(filename):
     #convert list into numpy array
     database = np.array(database,dtype="object")
 
-    close(file)
+    file.close()
 
     return date[0], headers, database
 
 ################################################################################
 
-def DandU(udate,date,database):
+def DandU(udate,date,database,headers):
     """
     This function downloads an update csv file from the TNS server and then uses it to update the local copy of the TNS database.
     Arguments:
@@ -71,7 +72,7 @@ def DandU(udate,date,database):
     subprocess.call(rem,shell=True)
 
     #load in update entries (skip date and headers tho)
-    UDname = f"/home/pha17gh/TNS/{ufile}.csv"
+    UDname = f"/home/pha17gh/TNS/{ufile}"
     dummy1,dummy2,updates = loadDB(UDname)
 
     #now need to loop through each entry in the updates  and find match/ or add if new to the database
@@ -92,7 +93,7 @@ def DandU(udate,date,database):
     filename = "/home/pha17gh/TNS/tns_public_objects.csv"
     with open(filename, 'w') as file:
         csvwriter = csv.writer(file,delimiter=",") # create a csvwriter object
-        csvwriter.writerow([today.strftime('%Y-%m-%d %H:%M:%S')]) #add date to first row
+        csvwriter.writerow([date.strftime('%Y-%m-%d %H:%M:%S')]) #add date to first row
         csvwriter.writerows(database) # write the headers and rest of the data
 
 ################################################################################
