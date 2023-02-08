@@ -55,7 +55,7 @@ else:
 	#if over 25days difference then redownload the whole database from the TNS
 
 	#string that constitutes the curl command for downloading
-	cmd = '''curl -X POST -H 'user-agent: tns_marker{"tns_id":142993,"type": "bot", "name":"BillyShears"}' -d 'api_key=SECRET' https://www.wis-tns.org/system/files/tns_public_objects/ns_public_objects.csv.zip > /home/pha17gh/TNS/tns_public_objects.csv.zip'''
+	cmd = '''curl -X POST -H 'user-agent: tns_marker{"tns_id":142993,"type": "bot", "name":"BillyShears"}' -d 'api_key=SECRET' https://www.wis-tns.org/system/files/tns_public_objects/tns_public_objects.csv.zip > /home/pha17gh/TNS/tns_public_objects.csv.zip'''
 
 	#do the curl command to download the database
 	subprocess.call(cmd,shell=True)
