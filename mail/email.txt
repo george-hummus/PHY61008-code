@@ -1,0 +1,10 @@
+<p>
+Here is a little help from your friends:<br><br>
+
+Attached is the list of interesting transients selected from the TNS database that are visible from La Palma tonight.<br>
+The list is ordered by their calculated priority score (0 is high; 5 is low).<br><br>
+
+Regards,<br><br>
+
+<em>Billy Shears</em>
+</p>

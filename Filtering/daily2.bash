@@ -13,3 +13,6 @@ cp  /home/pha17gh/TNS/transient_list.csv /home/pha17gh/TNS/old_pscores/transient
 
 #run filtering and pscore calculator
 python /home/pha17gh/TNS/filter.py
+
+#send automated email with priority scores attached
+python /home/pha17gh/TNS/mail/mail.py
