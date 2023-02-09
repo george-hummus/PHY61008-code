@@ -12,7 +12,7 @@ import json
 import numpy as np
 import datetime as dt
 import subprocess
-from filter_funcs import *
+from functions import *
 
 DBname = "/home/pha17gh/TNS/tns_public_objects.csv" #database file name
 

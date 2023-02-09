@@ -12,7 +12,7 @@ mv /home/pha17gh/TNS/tns_public_objects_* /home/pha17gh/TNS/old_updates/
 cp  /home/pha17gh/TNS/transient_list.csv /home/pha17gh/TNS/old_pscores/transient_list_${yesterday}.csv
 
 #run filtering and pscore calculator
-python /home/pha17gh/TNS/filter.py
+python /home/pha17gh/TNS/filter2.py
 
 #send automated email with priority scores attached
 python /home/pha17gh/TNS/mail/mail.py

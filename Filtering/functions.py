@@ -5,7 +5,7 @@ Author: George Hume
 2022
 """
 
-### IMPORTS ### nn
+### IMPORTS ###
 import csv
 import numpy as np
 import datetime as dt
@@ -14,7 +14,7 @@ from skyfield.api import N, E, wgs84, load, utc, Star
 from tqdm import tqdm
 import subprocess
 
-################################################################################
+################# FUNCTIONS FOR UPDATING TNS DATABASE ##########################
 
 def loadDB(filename):
     """
@@ -96,7 +96,7 @@ def DandU(udate,date,database,headers):
         csvwriter.writerow([date.strftime('%Y-%m-%d %H:%M:%S')]) #add date to first row
         csvwriter.writerows(database) # write the headers and rest of the data
 
-################################################################################
+################# FUNCTIONS FOR CALCULATING PRIORITY SCORES ##########################
 
 def TNSlice(database,date):
     """
@@ -395,16 +395,12 @@ def Visibility(date, ra, dec, lat, long, elv, ephm = 'de421.bsp'):
 
 def pscore(database,weights):
     """
-    Filters a database of targets by removing all those with zero observable time
-    and then calculates the rest's priorty score, which depends on the target's
-    ranking in observable time, transit altitude, and lunar separation.
-    The filtered database is then saved  as a numpy array with the priorty
-    scores as the final column.
-    Arguments:
-        - database: numpy object array of the list of targets (ID first column and the observable time, transit altitude, and lunar separation in last 3 columns)
-        - weights: list of numbers to weight the contribitions towards the priorty score for the  observable time, transit altitude, and lunar separation
-    Outputs:
-        - t_targets: new numpy object array with the remaning targets and their priorty scores in the final column
+	Filters a database of targets by removing all those with zero observable time and then calculates the rest's priority score, which depends on the target's ranking in observable time, transit altitude, lunar separation, brightness and time since discovery. The filtered database is then saved  as a numpy array with the priority scores as the final column.
+	Arguments:
+    	- database: numpy object array of the list of targets (ID first column and the observable time, transit altitude, and lunar separation in last 3 columns)
+    	- weights: list of numbers to weight the contributions towards the priority score for the  observable time, transit altitude, and lunar separation
+	Outputs:
+    	- t_targets: new numpy object array with the remaining targets and their priority scores in the final column
     """
 
     #remove all entries which are not observable
@@ -414,39 +410,56 @@ def pscore(database,weights):
             bad_idx.append(i)
     t_array = np.delete(database,bad_idx,0) #deletes rows with no observable time
 
-    #save remaning IDs
-    newIDs = t_array.T[0]
-    pscores = np.zeros(newIDs.shape)
+    #save remaining IDs
+    IDs = t_array.T[0]
 
-    #sort the intresting rows in decending order so high pscore = low priorty and vice versa
-    to_sort = np.flip(np.sort(t_array.T[-3]))
-    ms_sort = np.flip(np.sort(t_array.T[-1]))
-    alt_sort = np.flip(np.sort(t_array.T[-2]))
+    #convert strings into useable quantities
+    disc = np.array([dt.datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f") for date in t_array.T[-6]])
+    #discovery dates as datetime objects
 
-    #ranking loop - may need a better way to rank these
-    for j in tqdm(range(to_sort.size)):
-        #extracts the value of the sorted arrays
-        to = to_sort[j]
-        ms = ms_sort[j]
-        al = alt_sort[j]
+    mag = np.array(t_array.T[-4],dtype="float") #magnitudes as floats
+    tobs = np.array(t_array.T[-3],dtype="float") #observable time as decimal hour
+    talt = np.array(t_array.T[-2],dtype="float") #transit alt as decimal angle
+    lsep = np.array(t_array.T[-1],dtype="float") #lunar separation as decimal angle
 
-        #looks for the indices of the rows these values correpsonds to in the array of targets
-        tID = np.where(t_array.T[-3]==to)[0]
-        mID = np.where(t_array.T[-1]==ms)[0][0]
-        aID = np.where(t_array.T[-2]==al)[0][0]
+    varbs = [tobs,talt,lsep,mag,disc] #list containing the variables needed to calculate the pscores
 
-        #adds the value of j to priorty score for the given index - weighted
-        pscores[tID] += (weights[0]*j)
-        pscores[mID] += (weights[1]*j)
-        pscores[aID] += (weights[2]*j)
+    #makes a ordered list of each variable with their ID
+    ivarbs = []
+    for varb in varbs:
+    	I = np.concatenate((np.resize(IDs,(IDs.size,1)),np.resize(varb,(varb.size,1))),axis=1)
+    	#sort the array by ascending priority score (column index = -1)
+    	I = I[I[:, -1].argsort()]
+    	ivarbs.append(I)
 
-    #normalise the priority scores so they lie between 0-5 (where 5 is the highest priority)
+    #calculate the pscores
+    pscores = []
+    sz = IDs.size
+    for ID in IDs:
+    	#looks for where the ID is in each of the sorted lists
+    	#then calculates its score by doing (size of the array - index)
+    	#this is so that high index IDs (i.e., higher values) get lower pscore which = higher priority
+    	scores = []
+    	scores.append(sz-np.where(ivarbs[0]==ID)[0][0])
+    	scores.append(sz-np.where(ivarbs[1]==ID)[0][0])
+    	scores.append(sz-np.where(ivarbs[2]==ID)[0][0])
+    	scores.append(np.where(ivarbs[3]==ID)[0][0]) #no subtraction as we want the brightest objects (low mag)
+    	scores.append(sz-np.where(ivarbs[4]==ID)[0][0])
+
+    	#combine scores for different variables into one and apply weightings
+    	score = sum(np.array(scores)*np.array(weights))
+    	#weights applied by multiplication so some variables will contribute more to the final score
+
+    	pscores.append(score)
+    pscores = np.array(pscores,dtype=int)
+
+    #normalise so scores are between 0 (high) and 5 (low)
     pscores=((pscores-np.min(pscores))/np.max(pscores-np.min(pscores)) * 5)
 
-    #add the priorty scores to the new database array
+    #concatenate the IDs, variables and the pscores
     t_targets = np.concatenate((t_array,np.resize(pscores,(pscores.size,1))),axis=1)
 
-    #sort the array by ascending priority score (column index = -1)
+    #order concatenated list by pscore in descending order
     t_targets = t_targets[t_targets[:, -1].argsort()]
 
     return t_targets

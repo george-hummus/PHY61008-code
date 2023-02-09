@@ -14,7 +14,7 @@ Author: George Hume
 import csv
 import numpy as np
 import datetime as dt
-from filter_funcs import *
+from functions import *
 
 # loads in the tns database as numpy array along with
 #the date it was released as a string and a list of the headers
@@ -43,21 +43,11 @@ t_obs, t_alt, l_sep = Visibility(todaySTR, ra, dec, lat, long, elv)
 
 #from new database with columns for ID, name, ra, dec, t_disc t_mod, mag, t_obs, t_alt & lsep
 num = IDs.size
-newDB = np.concatenate(
-[np.resize(IDs,[num,1]),
-np.resize(prefix,[num,1]),
-np.resize(name,[num,1]),
-np.resize(ra,[num,1]),
-np.resize(dec,[num,1]),
-np.resize(t_disc,[num,1]),
-np.resize(t_mod,[num,1]),
-np.resize(mags,[num,1]),
-np.resize(t_obs,[num,1]),
-np.resize(t_alt,[num,1]),
-np.resize(l_sep,[num,1])],axis=1)
+newDB = np.array([IDs,prefix,name,ra,dec,t_disc,t_mod,mags,t_obs,t_alt,l_sep]).T
+#needs to be transposed so can remove entries with 0 observable time
 
 #remove targets with no observable time and find the priorty scores of the rest
-PSweights = [10,5,1] #weighting for the different contribitions towards the pscore
+PSweights = [10,5,1,0,0] #weighting for the different contribitions towards the pscore
 finalDB = pscore(newDB,PSweights) #final database includeing the priorty scores in last column
 
 #create a new list of headers for the new database (as have removed columns and added new ones)
