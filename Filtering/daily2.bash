@@ -15,4 +15,5 @@ cp  /home/pha17gh/TNS/transient_list.csv /home/pha17gh/TNS/old_pscores/transient
 python /home/pha17gh/TNS/filter2.py
 
 #send automated email with priority scores attached
+cd /home/pha17gh/TNS/mail/ #need to move to directory so it can find the json files to send the email
 python /home/pha17gh/TNS/mail/mail.py
