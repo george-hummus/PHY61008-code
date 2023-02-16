@@ -40,15 +40,15 @@ elif (deltaT>1) & (deltaT<=25):
 	for i in range(deltaT):
     	#go from last to most current update
 
-    	#date as string to find update file
+		#date as string to find update file
 		udate = DB_date.strftime('%Y%m%d')
-    	next_day = DB_date+dt.timedelta(days=1)
+		next_day = DB_date+dt.timedelta(days=1)
 
     	#do the update for that date
-    	DandU(udate,next_day,database,headers)
+		DandU(udate,next_day,database,headers)
 
     	#load new database that was just saved so it can be overwritten again
-    	DBdate, headers, database = loadDB(DBname)
+		DBdate, headers, database = loadDB(DBname)
 		DB_date = dt.datetime.strptime(DBdate, '%Y-%m-%d %H:%M:%S') #convert next date into datetime object
 
 else:

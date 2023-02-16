@@ -17,4 +17,4 @@ python /home/pha17gh/TNS/fastslow.py
 
 #send automated email with priority scores attached
 cd /home/pha17gh/TNS/mail/ #need to move to directory so it can find the json files to send the email
-python /home/pha17gh/TNS/mail/email_alert.py
+python /home/pha17gh/TNS/mail/email_alert.py --noauth_local_webserver

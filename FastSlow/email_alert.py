@@ -11,7 +11,7 @@ for row in csvreader:
 file.close()
 
 #get dates from transient list
-file=open("transient_list-S.csv")
+file=open("../transient_list-S.csv")
 csvreader = csv.reader(file) #openfile as csv
 info = next(csvreader)[0] #save the dates on the first line
 list_date = info[20:30] #date for which priority list was created
