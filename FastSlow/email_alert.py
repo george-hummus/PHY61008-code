@@ -1,4 +1,17 @@
-from simplegmail import Gmail
+"""
+Script to send email from gmail account with HTML message and attachments. Based on code from: https://mailtrap.io/blog/python-send-email-gmail/
+
+Author: George Hume
+2023
+"""
+
+
+import smtplib
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import os
 from datetime import datetime
 import csv
 
@@ -50,17 +63,29 @@ with open("transient_list-F.html","r") as file:
 fulltxt = words + "<br><hr> <b> PEPPER Fast List </b> <br><br>" + table
 
 
-gmail = Gmail() # will open a browser window to ask you to log in and authenticate
+smtpObj = smtplib.SMTP_SSL('smtp.gmail.com', 465)
 
-params = {
-  "to": "bs.newtransients@gmail.com", #send to self
-  "sender": "bs.newtransients@gmail.com",
-  "bcc": correspondents, #bcc the correspondents so they can't see who else receives it
-  "subject": f"Transients for {date}", #subject line with the date
-  "msg_html": fulltxt, #html message from the text file
-  "attachments": ["/home/pha17gh/TNS/transient_list-S.csv","/home/pha17gh/TNS/transient_list-F.csv"], #attaches the priority score list
-  "signature": True  # use my account signature
-}
-message = gmail.send_message(**params) #sends email
+smtpObj.login("bs.newtransients@gmail.com","PASSWORD")
 
-print("Emails Sent.")
+message = MIMEMultipart()
+message['Subject'] = f"Transients for {date}"
+message['From'] = "Billy Shears Transient Alerts <bs.newtransients@gmail.com>"
+message['To'] = "PEPPER Survey Collaborators"
+html_part = MIMEText(fulltxt,'html')
+message.attach(html_part)
+
+plists = ["/home/pha17gh/TNS/transient_list-S.csv","/home/pha17gh/TNS/transient_list-F.csv"]
+for plist in plists:
+    with open(plist, "rb") as attachment:
+    # Add the attachment to the message
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload((attachment).read())
+    encoders.encode_base64(part)
+    part.add_header("Content-Disposition",f"attachment; filename= {os.path.basename(plist)}")
+    message.attach(part)
+
+try:
+    smtpObj.sendmail("bs.newtransients@gmail.com", "ghume1@sheffield.ac.uk",message.as_string())
+    print("email sent")
+except:
+    print("email failed")
