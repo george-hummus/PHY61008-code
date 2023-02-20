@@ -11,6 +11,7 @@ from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 import os
 from datetime import datetime
 import csv
@@ -74,6 +75,12 @@ message['To'] = "PEPPER Survey Collaborators"
 html_part = MIMEText(fulltxt,'html')
 message.attach(html_part)
 
+#attach visiblity plots
+imagename = f"../VisPlots/top5_{datetime.now().strftime('%Y%m%d')}.jpg"
+with open(imagename, 'rb') as f:
+    imagepart = MIMEImage(f.read())
+message.attach(imagepart)
+
 plists = ["/home/pha17gh/TNS/transient_list-S.csv","/home/pha17gh/TNS/transient_list-F.csv"]
 for plist in plists:
     with open(plist, "rb") as attachment:
@@ -85,7 +92,7 @@ for plist in plists:
     message.attach(part)
 
 try:
-    smtpObj.sendmail("bs.newtransients@gmail.com", "ghume1@sheffield.ac.uk",message.as_string())
+    smtpObj.sendmail("bs.newtransients@gmail.com", correspondents,message.as_string())
     print("email sent")
 except:
     print("email failed")
