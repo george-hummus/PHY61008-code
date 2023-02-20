@@ -17,7 +17,7 @@ python /home/pha17gh/TNS/fastslow.py
 
 #make the visibility plots
 cd /home/pha17gh/TNS/
-python /home/pha17gh/TNS/pscore-checker.py
+python /home/pha17gh/TNS/visplots.py
 
 #send automated email with priority scores attached
 cd /home/pha17gh/TNS/mail/ #need to move to directory so it can find the json files to send the email
