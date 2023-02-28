@@ -11,7 +11,6 @@ import numpy as np
 import datetime as dt
 from skyfield import almanac
 from skyfield.api import N, E, wgs84, load, utc, Star
-from tqdm import tqdm
 import subprocess
 
 ################# FUNCTIONS FOR UPDATING TNS DATABASE ##########################
@@ -322,7 +321,7 @@ def Visibility(ra, dec, lat, long, elv, ephm = 'de421.bsp'):
     tObs, lSep = [], []
 
     #find altitude of each transient at sunset, start of dark time, end of darktime, and sunrise
-    for k in tqdm(range(ra.size)):
+    for k in range(ra.size):
         #RA and Dec of target in decimal degrees converted from string
         RA = float(ra[k])
         Dec = float(dec[k])
@@ -386,27 +385,70 @@ def Visibility(ra, dec, lat, long, elv, ephm = 'de421.bsp'):
         tObs.append(t_obs)
         lSep.append(asep)
 
-    #return and convert to numpy arrays
-    return np.array(tObs), np.array(lSep)
+    #return and convert to numpy arrays, along with lunar illumination
+    return np.array(tObs), np.array(lSep), mill
 
 ################################################################################
 
-def pscore(database,weights):
+def thresholds(DB,mill):
+    """
+    Removes targets from a database if they don't meet the thresholds of 3 different variables - observable time, lunar separation, and discovery magnitude.
+	Arguments:
+    	- DB: numpy object array of the list of targets with discovery magnitude, observable time, and lunar separation in column indices -4, -3, and -2 respectively.
+    	- mill: the illumination percentage of the moon as a float
+	Output:
+    	- t_array: same database as ingested but with transients removed that don't meet the thresholds set.
+    """
+    #set observable time threshold (min exp time is ~15mins so cant observe
+    #anything with obs time less than this)
+    to_th = 0.25
+
+    #set lunar separation the threshold (depends on lunar illumination)
+    if mill < 0.25 : #dark sky
+        m_th = 10
+    elif (0.25 <= mill < 0.65): #grey sky
+        m_th = 20
+    else: #bright sky
+        m_th = 40
+
+    #set magnitude thresholds
+    ml_th = 16 #lower threshold
+    mu_th = 18.5 #upper threshold
+
+    #remove all entries which dont meet the thresholds
+    bad_idx = []
+    for idx, entry in enumerate(DB):
+        if entry[-3] <= to_th: #check the observable time of the target
+            bad_idx.append(idx)
+        elif entry[-2] < m_th: #check the lunar separation
+            bad_idx.append(idx)
+        elif (float(entry[-4]) <= ml_th) or (float(entry[-4]) >= mu_th): #check magnitudes
+            bad_idx.append(idx)
+    t_array = np.delete(DB,bad_idx,0) #deletes rows with no observable time
+
+    return t_array
+
+################################################################################
+
+def pscore(database,weights,moon_per):
     """
 	Filters a database of targets by removing all those with zero observable time and then calculates the rest's priority score, which depends on the target's ranking in observable time, transit altitude, lunar separation, brightness and time since discovery. The filtered database is then saved  as a numpy array with the priority scores as the final column.
 	Arguments:
-    	- database: numpy object array of the list of targets (ID first column and the observable time, transit altitude, and lunar separation in last 3 columns)
+    	- database: numpy object array of the list of targets (ID first column and the observable time, and lunar separation in last 3 columns)
     	- weights: list of numbers to weight the contributions towards the priority score for the  observable time, transit altitude, and lunar separation
+        - moon_per: percentage illumination of the moon used to set threshold for the lunar separation
 	Outputs:
     	- t_targets: new numpy object array with the remaining targets and their priority scores in the final column
     """
 
-    #remove all entries which are not observable
-    bad_idx = []
-    for i in range(database.shape[0]):
-        if database[i][-3] == 0: #check the observable time of the target
-            bad_idx.append(i)
-    t_array = np.delete(database,bad_idx,0) #deletes rows with no observable time
+    #remove all entries that don't fit within the thresholds
+    t_array = thresholds(database,moon_per)
+
+    #check the lenth of the thresholded array
+    if t_array.size == 0:
+        #if all targets were removed just return none and end function
+        print("none")
+        return t_array
 
     #save remaining IDs
     IDs = t_array.T[0]
@@ -531,19 +573,23 @@ def priority_list(database,date,Slow=True):
 
 
         #calculate observable time and lunar separation of targets
-        t_obs, l_sep = Visibility(ra, dec, lat, long, elv)
+        t_obs, l_sep, l_per = Visibility(ra, dec, lat, long, elv)
 
         #new databse with all relevant information
         newDB = np.array([IDs,prefix,name,ra,dec,t_disc,t_mod,mags,t_obs,l_sep,it_names]).T
 
         #different weightings for PEPPER Fast and Slow
         if Slow == False:
-            wghts = [5,3,8,10] #priortise discovery date and magnitude
+            wghts = [2,3,8,10] #priortise discovery date and magnitude; least obs_time
         else: #i.e., slow
             wghts = [10,7,8,3] #priortise observable time and magnitude
 
         #create database with pscores
-        pDB = pscore(newDB,wghts)
+        pDB = pscore(newDB,wghts,l_per)
+
+        #check pDB to see if none value
+        if pDB.size == 0:
+            return pDB
 
 
         # urls to last column #

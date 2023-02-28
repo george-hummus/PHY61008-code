@@ -33,24 +33,37 @@ topline = [f"List calculated for {todaySTR} using TNS database from {date}"]
 fastDB = priority_list(database,date,False)
 
 #save out fast database CSV
-filename = "/home/pha17gh/TNS/transient_list-F.csv"
+filename = "/home/pha17gh/TNS/mail/transient_list-F.csv"
 with open(filename, 'w') as file:
     csvwriter = csv.writer(file,delimiter=",") # create a csvwriter object
     csvwriter.writerow(topline)
     csvwriter.writerow(newHeaders) #add headers first row
     csvwriter.writerows(fastDB) # write the rest of the data
 
-#save out fast database as HTML table to attach to email
-df = pd.DataFrame(fastDB, columns = newHeaders) #convert to pandas dataframe
-df['fink_url'] = '<a href=' + df['fink_url'] + '><div>' + df['fink_url'] +'</div></a>' #makes fink url clickable
-df['name'] = '<a href=' + "https://www.wis-tns.org/object/" + df['name'] + '><div>' + df['name'] +'</div></a>' #click tns name to take to website
-html = df.to_html(escape=False)
-with open("/home/pha17gh/TNS/mail/transient_list-F.html", "w") as file:
-    file.write(html) #save string as HTML file
+if fastDB.size == 0:
+    #if no transients met the requirements replace table with notice
+    file = open("/home/pha17gh/TNS/mail/transient_list-F.html", "w")
+    file.write("<p><font color=#FF0000><em> No transients met the requirements for PEPPER Fast tonight. </em></font></p><br>")
+else:
+    #save out fast database as HTML table to attach to email
+    #render dataframe as html file
+    df = pd.DataFrame(fastDB, columns = newHeaders)
+    df['fink_url'] = '<a href=' + df['fink_url'] + '><div>' + df['fink_url'] +'</div></a>' #makes fink url clickable
+    df['name'] = '<a href=' + "https://www.wis-tns.org/object/" + df['name'] + '><div>' + df['name'] +'</div></a>' #click tns name to take to website
+    html = df.to_html(escape=False, justify = "left",index = False)
+    file = open("/home/pha17gh/TNS/mail/transient_list-F.html", "w")
+    file.write(html)
 
 
 # PEPPER SLOW #
 slowDB = priority_list(database,date)
+
+if slowDB.size == 0:
+    #if no transients met the requirements for slow then they didn't for fast either
+    # so can add message explaining none met slow requirements either
+    file.write("<p><font color=#FF0000><em> No transients met the requirements for PEPPER Slow tonight. </em></font></p><br>")
+
+file.close()
 
 #save out the slow database CSV
 filename = "/home/pha17gh/TNS/transient_list-S.csv"

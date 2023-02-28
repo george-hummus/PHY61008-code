@@ -76,7 +76,7 @@ html_part = MIMEText(fulltxt,'html')
 message.attach(html_part)
 
 #attach visiblity plots
-imagename = f"../VisPlots/top5_{datetime.now().strftime('%Y%m%d')}.jpg"
+imagename = f"../VisPlots/top_{datetime.now().strftime('%Y%m%d')}.jpg"
 with open(imagename, 'rb') as f:
     imagepart = MIMEImage(f.read())
 message.attach(imagepart)
