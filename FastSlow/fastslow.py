@@ -33,7 +33,7 @@ topline = [f"List calculated for {todaySTR} using TNS database from {date}"]
 fastDB = priority_list(database,date,False)
 
 #save out fast database CSV
-filename = "/home/pha17gh/TNS/mail/transient_list-F.csv"
+filename = "/home/pha17gh/TNS/transient_list-F.csv"
 with open(filename, 'w') as file:
     csvwriter = csv.writer(file,delimiter=",") # create a csvwriter object
     csvwriter.writerow(topline)
